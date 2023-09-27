@@ -22,12 +22,18 @@ import cv2
 import numpy as np
 from  osgeo import gdal, osr
 
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig()
+logger.setLevel(logging.DEBUG)
+
 
 onfile =True
 out_err = None
-io_folder ="/data/temp/pietro"
+io_folder = 'C:/Users/pasqu/Desktop/Uni/Tesi/mapreduce-main/mappescaricate'
 
-dtiles = None
+dtiles = []
 glob_lenx = None
 
 def downloaded_tiles(tiles_dir,lenx):
@@ -236,7 +242,7 @@ class Downloader(Thread):
             if onfile and i in dtiles:
 
                 continue
-            print("tile {i} not found".format(i=i))
+            # print("tile {i} not found".format(i=i))
             step = float(i)/len(self.urls)
             if step - temp > 0.01:
                 temp = step
@@ -248,9 +254,13 @@ class Downloader(Thread):
             picio = self.download(url)
 
             if onfile:
-                y_cor = i // glob_lenx
-                x_cor = i %  glob_lenx
-                with open(io_folder+"/" + str(y_cor) + "_" +str(x_cor)+"_tile.jpeg", "wb") as fout:
+                url_parts = url.split("&")
+                # y_cor = i // glob_lenx
+                # x_cor = i %  glob_lenx
+                y_cor = url_parts[2][2:]
+                x_cor = url_parts[1][2:]
+
+                with open(io_folder+"/" + y_cor + "_" + x_cor+"_tile.jpeg", "wb") as fout:
                     fout.write(io.BytesIO(picio).getbuffer())
                     fout.close()
             else:
@@ -422,20 +432,41 @@ def main(left, top, right, bottom, zoom, filePath, style='s', server="Google Chi
     saveTiff(r, g, b, gt, filePath)
 
 
+def save_tiles(left, top, right, bottom, zoom, style='s', server="Google China"):
+    urls = get_urls(left, top, right, bottom, zoom, server, style)
+    # Group URLs based on the number of CPU cores to achieve roughly equal amounts of tasks
+    urls_group = [urls[i:i + math.ceil(len(urls) / 1)] for i in
+                  range(0, len(urls), math.ceil(len(urls) / 1))]
+
+    # Each set of URLs corresponds to a process for downloading tile maps
+    logger.info('Tiles downloading......')
+    pool = multiprocessing.Pool(1)
+    results = pool.map(download_tiles, urls_group)
+    pool.close()
+    pool.join()
+    logger.info('Tiles download complete')
+
+
+   
+
+
 # ---------------------------------------------------------
 if __name__ == '__main__':
 
     start_time = time.time()
     out_err = open("bad_links.csv", "w")
-    zone = 'campania'
+    zone = 'test'
     maps = {'marcianise': [41.03699966153493, 14.282332207120104, 41.02356625889453, 14.300298406435248],
             'casapulla' : [41.082515040404, 14.268917099445803, 41.066324184008195, 14.302277371886024],
             'casagiove' : [41.08261546935178, 14.303388824263887, 41.07064562316231, 14.324267139938394],
             'capodrise' : [41.05162612435181, 14.288554711937884, 41.03859863125092, 14.311235472131052],
             'portico_caserta': [41.06655157598264, 14.26429436809843, 41.052507617894044, 14.29476426353296],
             'puglianello': [],
-            'campania': [41.677007, 13.892689, 41.087208, 15.770957]
+            'campania': [41.677007, 13.892689, 41.087208, 15.770957],
+            'test': [41.047047, 14.282363, 41.029596, 14.326394]
             }
+
+    
 
     c_map = maps[zone]
 
@@ -448,9 +479,21 @@ if __name__ == '__main__':
     pos2x, pos2y = wgs_to_tile(x2, y2, z)
     lenx = pos2x - pos1x + 1
     glob_lenx = lenx
-    dtiles =  downloaded_tiles("/data/temp/pietro", lenx)
+    leny = pos2y-pos1y +1
+    logger.info("tiles from {pos1x},{pos1y}, [{lenx},{leny}]".format(pos1x=pos1x,pos1y=pos1y,lenx=lenx,leny=leny))
+    
+    
+    
+    if os.path.isdir(io_folder):
+        logger.info("Listing available tiles do not download them again")
+        dtiles =  downloaded_tiles(io_folder, lenx)
+    else:
+        os.makedirs(io_folder)
 
-    main(c_map[1], c_map[0], c_map[3], c_map[2], 17, r''+zone+'.tif', server="Google")
+    onfile = True
+    save_tiles(c_map[1], c_map[0], c_map[3], c_map[2], 17, style='s', server="Google")
+
+    #main(c_map[1], c_map[0], c_map[3], c_map[2], 17, r''+zone+'.tif', server="Google")
 
     end_time = time.time()
     print('lasted a total of {:.2f} seconds'.format(end_time - start_time))
