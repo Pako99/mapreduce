@@ -31,10 +31,9 @@ logger.setLevel(logging.DEBUG)
 
 onfile =True
 out_err = None
-zone = 'test'
-z=17
-io_folder = "images/"+zone+"/"+str(z)+"/tiles"
-dtiles = []
+io_folder = None
+
+dtiles = None
 glob_lenx = None
 
 def downloaded_tiles(tiles_dir,lenx):
@@ -456,7 +455,7 @@ if __name__ == '__main__':
 
     start_time = time.time()
     out_err = open("bad_links.csv", "w")
-    
+    zone = 'test'
     maps = {'marcianise': [41.03699966153493, 14.282332207120104, 41.02356625889453, 14.300298406435248],
             'casapulla' : [41.082515040404, 14.268917099445803, 41.066324184008195, 14.302277371886024],
             'casagiove' : [41.08261546935178, 14.303388824263887, 41.07064562316231, 14.324267139938394],
@@ -475,7 +474,7 @@ if __name__ == '__main__':
     y1 = c_map[0]
     x2 = c_map[3]
     y2 = c_map[2]
-    
+    z = 17
     pos1x, pos1y = wgs_to_tile(x1, y1, z)
     pos2x, pos2y = wgs_to_tile(x2, y2, z)
     lenx = pos2x - pos1x + 1
@@ -483,8 +482,8 @@ if __name__ == '__main__':
     leny = pos2y-pos1y +1
     logger.info("tiles from {pos1x},{pos1y}, [{lenx},{leny}]".format(pos1x=pos1x,pos1y=pos1y,lenx=lenx,leny=leny))
     
-    
-    
+    io_folder = "images/"+zone+"/"+str(z)+"/tiles"
+    dtiles = []
     if os.path.isdir(io_folder):
         logger.info("Listing available tiles do not download them again")
         dtiles =  downloaded_tiles(io_folder, lenx)
