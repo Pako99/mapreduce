@@ -15,6 +15,7 @@ import multiprocessing
 import time
 import urllib.request as ur
 from math import floor, pi, log, tan, atan, exp
+from sottomatrici import distribute_submatrices
 from threading import Thread
 
 import PIL.Image as pil
@@ -212,8 +213,8 @@ class Downloader(Thread):
         # urls represents the list of URLs nedd to be downloaded
         # datas represents the list of data need to be returned.
         super().__init__()
-        self.urls = urls
-        self.datas = datas
+        self.urls = urls  #immagini da scaricare è una lista
+        self.datas = datas #immagini scaricate da ritornare
         self.index = index
         self.count = count
 
@@ -332,10 +333,13 @@ def get_urls(x1, y1, x2, y2, z, source, style):
     pos2x, pos2y = wgs_to_tile(x2, y2, z)
     lenx = pos2x - pos1x + 1
     leny = pos2y - pos1y + 1
-    print("Positions：{x} X {y}".format(x=pos1x, y=pos1y))
-    print("Total tiles number：{x} X {y}".format(x=lenx, y=leny))
-    urls = [get_url(source, i, j, z, style) for j in range(pos1y, pos1y + leny) for i in range(pos1x, pos1x + lenx)]
-    return urls
+    tile_matrix = np.empty((leny, lenx), dtype=object)
+
+    for j in range(pos1y, pos1y + leny):
+        for i in range(pos1x, pos1x + lenx):
+            tile_matrix[j - pos1y, i - pos1x] = get_url(source, i, j, z, style)
+
+    return tile_matrix
 
 
 # ---------------------------------------------------------
@@ -356,12 +360,16 @@ def merge_tiles(datas, x1, y1, x2, y2, z):
     return outpic
 
 
-def download_tiles(urls, multi=10):
-    url_len = len(urls)
-    datas = [None] * url_len
+def download_tiles(tile_matrix, multi=10):
     if multi < 1 or multi > 20 or not isinstance(multi, int):
         raise Exception("multi of Downloader shuold be int and between 1 to 20.")
-    tasks = [Downloader(i, multi, urls, datas) for i in range(multi)]
+    num_rows, num_cols = tile_matrix.shape
+    
+    num_workers = min(multi, num_rows * num_cols)
+    datas = [None] * (num_rows * num_cols)
+    submatrix_size = num_rows // num_workers
+    workers_submatrices = distribute_submatrices(tile_matrix, num_workers, submatrix_size)
+    tasks = [Downloader(i,num_workers, urls, datas) for i, urls in enumerate(workers_submatrices)]
     for i in tasks:
         i.start()
     for i in tasks:
