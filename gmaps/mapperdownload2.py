@@ -96,7 +96,7 @@ for line in sys.stdin:
     # Estrai gli URL dalla sottomatrice 5x5
    
             # Estrai gli URL dalla sottomatrice 5x5
-     submatrix = tile_matrix[start_row:start_row+5, start_col:start_col+5]
+    submatrix = tile_matrix[start_row:start_row+5, start_col:start_col+5]
 
             # Scarica e salva i tile corrispondenti in HDFS
     for row in range(5):
