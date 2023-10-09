@@ -91,18 +91,19 @@ for line in sys.stdin:
 
         # Estrai i due valori tra le virgole
         parts = line.split(',')
-    start_row, start_col = map(int, line.split(','))
+        start_row, start_col = map(int, line.split(','))
 
     # Estrai gli URL dalla sottomatrice 5x5
-    submatrix = tile_matrix[start_row:start_row+5, start_col:start_col+5]
+   
+            # Estrai gli URL dalla sottomatrice 5x5
+     submatrix = tile_matrix[start_row:start_row+5, start_col:start_col+5]
 
-    # Scarica e salva i tile corrispondenti in HDFS
+            # Scarica e salva i tile corrispondenti in HDFS
     for row in range(5):
         for col in range(5):
-            url = submatrix[row, col]
-            if url:
-                download_and_save_image(url)
-
-
+           url = submatrix[row, col]
+           if url:
+                 download_and_save_image(url)
+    
 
 
