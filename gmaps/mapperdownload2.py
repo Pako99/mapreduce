@@ -60,17 +60,17 @@ downloaded_urls = set()
 def download_and_save_image(url):
     HEADERS = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36 Edg/88.0.705.68'}
-
+    hdfs_folder="/immagini"
     header = ur.Request(url, headers=HEADERS)
     err = 0
     while (err < 3):
         try:
             image_data = ur.urlopen(header).read()
             filename = os.path.basename(url) + '.jpg'  # Aggiungi l'estensione .jpg al nome del file
-
+            hdfs_file_path = os.path.join(hdfs_folder, filename)
             # Verifica se l'URL è già stato scaricato prima di procedere
             if url not in downloaded_urls:
-                hdfs_client.write(filename, image_data, overwrite=True)
+                hdfs_client.write(hdfs_file_path, image_data, overwrite=True)
                 downloaded_urls.add(url)
                 sys.stderr.write(f"Scaricato {filename} e salvato su HDFS\n")
             else:
