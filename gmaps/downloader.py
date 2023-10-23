@@ -15,7 +15,6 @@ import multiprocessing
 import time
 import urllib.request as ur
 from math import floor, pi, log, tan, atan, exp
-from sottomatrici import distribute_submatrices
 from threading import Thread
 
 import PIL.Image as pil
@@ -273,9 +272,7 @@ class Downloader(Thread):
 # ---------------------------------------------------------
 
 # ---------------------------------------------------------
-def getExtent(x1, y1, x2, y2, z, source="Google China"):
-    pos1x, pos1y = wgs_to_tile(x1, y1, z)
-    pos2x, pos2y = wgs_to_tile(x2, y2, z)
+def getExtent(pos1x, pos1y, pos2x, pos2y, z, source="Google China"):
     Xframe = pixls_to_mercator(
         {"LT": (pos1x, pos1y), "RT": (pos2x, pos1y), "LB": (pos1x, pos2y), "RB": (pos2x, pos2y), "z": z})
     for i in ["LT", "LB", "RT", "RB"]:
@@ -288,6 +285,7 @@ def getExtent(x1, y1, x2, y2, z, source="Google China"):
     else:
         raise Exception("Invalid argument: source.")
     return Xframe
+
 
 
 def saveTiff(r, g, b, gt, filePath):
