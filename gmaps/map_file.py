@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import logging
 import time
 import numpy as np
@@ -23,13 +24,12 @@ if __name__ == '__main__':
             'portico_caserta': [41.06655157598264, 14.26429436809843, 41.052507617894044, 14.29476426353296],
             'puglianello': [],
             'campania': [41.677007, 13.892689, 41.087208, 15.770957],
-            'test': [41.047047, 14.282363, 41.029596, 14.326394],
-            'giugliano':[40.94924739640975, 14.203702723339484,40.94853718953001, 14.20467873565106]
+            'test': [41.047047, 14.282363, 41.029596, 14.326394]
             }
 
     
 
-    c_map = maps['test']
+    c_map = maps[zone]
 
     x1 = c_map[1]
     y1 = c_map[0]
@@ -50,9 +50,11 @@ if __name__ == '__main__':
     N = 4
     matrix_size = 20
     # Calculate the size of each submatrix
-    submatrix_size = 5
+    submatrix_size = 9
 
-    subm_m_size = matrix_size/submatrix_size
+    matrix_size = matrix_size + (submatrix_size - matrix_size % submatrix_size )
+
+    subm_m_size = (matrix_size/submatrix_size)
 
 
     # Calculate the number of submatrices per worker
@@ -64,21 +66,29 @@ if __name__ == '__main__':
 
     for worker_id in range(N):
         submatrix_batch = []
-        str_line = {'msize': matrix_size, 'subsize':submatrix_size, 'pos1x': pos1x, 'pos1y':pos1y,'pos2x':pos2x,'pos2y':pos2y}
+        str_line = {'msize': matrix_size, 'subsize': submatrix_size, 'pos1x': pos1x, 'pos1y': pos1y}
         str_line['server'] = "Google"
         str_line['style'] = 's'
         str_line['zoom'] = z
-        for i in range(submatrices_per_worker):
 
+        # Calcola il numero massimo di sottomatrici che un worker può gestire
+        max_submatrices_per_worker = submatrices_per_worker
+        if worker_id == N - 1:
+            max_submatrices_per_worker += (matrix_size // submatrix_size) * (matrix_size // submatrix_size) % N
+
+        for i in range(max_submatrices_per_worker):
             submatrix_id = i + submatrices_per_worker * worker_id
+
+            # Assicurati che il submatrix_id sia all'interno del range corretto
+            if submatrix_id >= (matrix_size // submatrix_size) * (matrix_size // submatrix_size):
+                break
+
             subm_row = int(submatrix_id // (matrix_size // submatrix_size))
             subm_col = int(submatrix_id % (matrix_size // submatrix_size))
             start_row = int(subm_row * submatrix_size)
             start_col = int(subm_col * submatrix_size)
-            str_line['start_row']=start_row
-            str_line['start_col']=start_col
+            str_line['start_row'] = start_row
+            str_line['start_col'] = start_col
+            outfile.write(json.dumps(str_line) + "\n")
 
-            outfile.write(json.dumps(str_line)+"\n")
     outfile.close()
-
-
