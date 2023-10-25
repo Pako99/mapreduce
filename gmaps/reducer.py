@@ -29,7 +29,7 @@ def merge_tiles(pos1x, pos1y, lenx, leny, tiles_dir):
     print('Tiles merge completed')
     return merged_image
 
-
+output_dir = "./immagini/temp"
 if __name__ == "__main__":
     for line in sys.stdin: 
         json_str =json.loads(line)
@@ -42,9 +42,7 @@ if __name__ == "__main__":
         leny = end_col-start_col
         pos1x = json_str['pos1x'] + start_row
         pos1y = json_str['pos1y'] + start_col
-        output_dir = "./immagini/temp"
         outpic = merge_tiles(pos1x, pos1y, lenx, leny, json_str['tiles_dir'])
-        
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         outpic = outpic.convert('RGB')

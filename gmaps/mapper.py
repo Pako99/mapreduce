@@ -61,6 +61,7 @@ if __name__ == '__main__':
     for line in sys.stdin:
         urls,datain=get_urls(line)
         tiles_dir=datain['tiles_dir']
+        datain['tiles_dir']=f"{out_dir}{tiles_dir}"
         start_col = datain['start_col']
         end_col = start_col + datain['subsize']
         start_row = datain['start_row']
@@ -76,10 +77,10 @@ if __name__ == '__main__':
              image = download_image(url)
              if image is not None :
                  filename = f"{pos1y + y}_{pos1x + x}_tile.jpeg"
-                 save_image(image, f"{out_dir}/{tiles_dir}", filename)
+                 save_image(image, f"{datain['tiles_dir']}", filename)
                  
                          
-        datain['tiles_dir']=f"{out_dir}{tiles_dir}"         
+                 
         print(json.dumps(datain))
             
         
