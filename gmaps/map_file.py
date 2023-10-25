@@ -9,11 +9,8 @@ logger = logging.getLogger(__name__)
 logging.basicConfig()
 logger.setLevel(logging.DEBUG)
 
-
-
 # ---------------------------------------------------------
 if __name__ == '__main__':
-
     start_time = time.time()
     out_err = open("bad_links.csv", "w")
     zone = 'test'
@@ -27,8 +24,6 @@ if __name__ == '__main__':
             'test': [41.047047, 14.282363, 41.029596, 14.326394]
             }
 
-    
-
     c_map = maps[zone]
 
     x1 = c_map[1]
@@ -40,55 +35,37 @@ if __name__ == '__main__':
     pos2x, pos2y = wgs_to_tile(x2, y2, z)
     lenx = pos2x - pos1x + 1
     glob_lenx = lenx
-    leny = pos2y-pos1y +1
-    logger.info("tiles from {pos1x},{pos1y}, [{lenx},{leny}]".format(pos1x=pos1x,pos1y=pos1y,lenx=lenx,leny=leny))
-    
+    leny = pos2y - pos1y + 1
+    logger.info("tiles from {pos1x},{pos1y}, [{lenx},{leny}]".format(pos1x=pos1x, pos1y=pos1y, lenx=lenx, leny=leny))
 
-
-
-    # Define the number of workers (N)
-    N = 4
-    matrix_size = 20
+    matrix_size = 30
     # Calculate the size of each submatrix
     submatrix_size = 9
 
-    matrix_size = matrix_size + (submatrix_size - matrix_size % submatrix_size )
+    matrix_size = matrix_size + (submatrix_size - (matrix_size % submatrix_size))
 
-    subm_m_size = (matrix_size/submatrix_size)
+    subm_m_size = (matrix_size / submatrix_size)
 
+    # Calculate the number of submatrices
+    submatrices_number = (matrix_size // submatrix_size) * (matrix_size // submatrix_size)
+    logger.info("matrix size= {ms} submatrix size= {sms}".format(ms=matrix_size, sms=submatrix_size))
 
-    # Calculate the number of submatrices per worker
-    submatrices_per_worker = (matrix_size // submatrix_size) * (matrix_size // submatrix_size) // N
-    logger.info("matrix size= {ms} submatrix size= {sms}, workers= {wrks}, subm_work= {sbmw}".format(ms=matrix_size, sms=submatrix_size, wrks=N, sbmw=submatrices_per_worker))
     # Distribute submatrices among N workers
- 
     outfile = open("mapper_input.txt", "w")
 
-    for worker_id in range(N):
-        submatrix_batch = []
+    for submatrix_id in range(submatrices_number):
+    
         str_line = {'msize': matrix_size, 'subsize': submatrix_size, 'pos1x': pos1x, 'pos1y': pos1y}
         str_line['server'] = "Google"
         str_line['style'] = 's'
         str_line['zoom'] = z
-
-        # Calcola il numero massimo di sottomatrici che un worker può gestire
-        max_submatrices_per_worker = submatrices_per_worker
-        if worker_id == N - 1:
-            max_submatrices_per_worker += (matrix_size // submatrix_size) * (matrix_size // submatrix_size) % N
-
-        for i in range(max_submatrices_per_worker):
-            submatrix_id = i + submatrices_per_worker * worker_id
-
-            # Assicurati che il submatrix_id sia all'interno del range corretto
-            if submatrix_id >= (matrix_size // submatrix_size) * (matrix_size // submatrix_size):
-                break
-
-            subm_row = int(submatrix_id // (matrix_size // submatrix_size))
-            subm_col = int(submatrix_id % (matrix_size // submatrix_size))
-            start_row = int(subm_row * submatrix_size)
-            start_col = int(subm_col * submatrix_size)
-            str_line['start_row'] = start_row
-            str_line['start_col'] = start_col
-            outfile.write(json.dumps(str_line) + "\n")
+        subm_row = int(submatrix_id // (matrix_size // submatrix_size))
+        subm_col = int(submatrix_id % (matrix_size // submatrix_size))
+        start_row = int(subm_row * submatrix_size)
+        start_col = int(subm_col * submatrix_size)
+        str_line['start_row'] = start_row
+        str_line['start_col'] = start_col
+        outfile.write(json.dumps(str_line) + "\n")
+        
 
     outfile.close()
