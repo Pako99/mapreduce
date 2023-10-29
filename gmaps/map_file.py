@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+
 import logging
 import time
-import numpy as np
 import json
 from downloader import wgs_to_tile, get_url
 
@@ -9,8 +9,11 @@ logger = logging.getLogger(__name__)
 logging.basicConfig()
 logger.setLevel(logging.DEBUG)
 
+
+
 # ---------------------------------------------------------
 if __name__ == '__main__':
+
     start_time = time.time()
     out_err = open("bad_links.csv", "w")
     zone = 'test'
@@ -21,55 +24,84 @@ if __name__ == '__main__':
             'portico_caserta': [41.06655157598264, 14.26429436809843, 41.052507617894044, 14.29476426353296],
             'puglianello': [],
             'campania': [41.677007, 13.892689, 41.087208, 15.770957],
-            'test': [41.047047, 14.282363, 41.029596, 14.326394],
-            'melito ':[40.92771444067378, 14.219887933210089,40.925509564004884, 14.224179467277315],
-            'orta' :[40.975746666849105, 14.268537979604302,40.97041639590007, 14.27352333271716]
+            'test': [41.047047, 14.282363, 41.029596, 14.326394]
             }
 
-    c_map = maps['test' ]
+    
+
+    c_map = maps[zone]
 
     x1 = c_map[1]
     y1 = c_map[0]
     x2 = c_map[3]
     y2 = c_map[2]
-    z = 18
+    z = 17
     pos1x, pos1y = wgs_to_tile(x1, y1, z)
     pos2x, pos2y = wgs_to_tile(x2, y2, z)
     lenx = pos2x - pos1x + 1
     glob_lenx = lenx
-    leny = pos2y - pos1y + 1
-    logger.info("tiles from {pos1x},{pos1y}, [{lenx},{leny}]".format(pos1x=pos1x, pos1y=pos1y, lenx=lenx, leny=leny))
+    leny = pos2y-pos1y +1
+    logger.info("tiles from {pos1x},{pos1y}, [{lenx},{leny}]".format(pos1x=pos1x,pos1y=pos1y,lenx=lenx,leny=leny))
+    
 
-    matrix_size = 10
+
+
+    # Define the number of workers (N)
+    N = 4
+    matrix_size = 20
     # Calculate the size of each submatrix
     submatrix_size = 9
 
-    matrix_size = matrix_size + (submatrix_size - (matrix_size % submatrix_size))
+    matrix_size = matrix_size + (submatrix_size - matrix_size % 9 )
 
-    subm_m_size = (matrix_size / submatrix_size)
+    subm_m_size = matrix_size/submatrix_size
 
-    # Calculate the number of submatrices
-    submatrices_number = (matrix_size // submatrix_size) * (matrix_size // submatrix_size)
-    logger.info("matrix size= {ms} submatrix size= {sms}".format(ms=matrix_size, sms=submatrix_size))
 
+    # Calculate the number of submatrices per worker
+    submatrices_per_worker = (matrix_size // submatrix_size) * (matrix_size // submatrix_size) // N
+    logger.info("matrix size= {ms} submatrix size= {sms}, workers= {wrks}, subm_work= {sbmw}".format(ms=matrix_size, sms=submatrix_size, wrks=N, sbmw=submatrices_per_worker))
     # Distribute submatrices among N workers
-    outfile = open("mapper_input.txt", "w")
-
-    for submatrix_id in range(submatrices_number):
-        
-        
+ 
+   
+    tiles_dir=0
+    for worker_id in range(N):
+        submatrix_batch = []
+        str_line = {'msize': matrix_size, 'subsize':submatrix_size, 'pos1x': pos1x, 'pos1y':pos1y,'pos2x':pos2x,'pos2y':pos2y}
         str_line = {'msize': matrix_size, 'subsize': submatrix_size, 'pos1x': pos1x, 'pos1y': pos1y}
-        str_line['tiles_dir'] = submatrix_id
         str_line['server'] = "Google"
         str_line['style'] = 's'
         str_line['zoom'] = z
-        subm_row = int(submatrix_id // (matrix_size // submatrix_size))
-        subm_col = int(submatrix_id % (matrix_size // submatrix_size))
-        start_row = int(subm_row * submatrix_size)
-        start_col = int(subm_col * submatrix_size)
-        str_line['start_row'] = start_row
-        str_line['start_col'] = start_col
-        outfile.write(json.dumps(str_line) + "\n")
         
+        outfile = open(f"mapper_input.txt", "a")
 
+        for i in range(submatrices_per_worker):
+
+        # Calcola il numero massimo di sottomatrici che un worker pu? gestire
+         max_submatrices_per_worker = submatrices_per_worker
+        if worker_id == N - 1:
+            max_submatrices_per_worker += (matrix_size // submatrix_size) * (matrix_size // submatrix_size) % N
+
+        for i in range(max_submatrices_per_worker):
+            submatrix_id = i + submatrices_per_worker * worker_id
+
+            # Assicurati che il submatrix_id sia all'interno del range corretto
+            if submatrix_id >= (matrix_size // submatrix_size) * (matrix_size // submatrix_size):
+                break
+
+            subm_row = int(submatrix_id // (matrix_size // submatrix_size))
+            subm_col = int(submatrix_id % (matrix_size // submatrix_size))
+            start_row = int(subm_row * submatrix_size)
+            start_col = int(subm_col * submatrix_size)
+            str_line['start_row']=start_row
+            str_line['start_col']=start_col
+            str_line['start_row'] = start_row
+            str_line['start_col'] = start_col
+            str_line['tiles_dir']=tiles_dir
+            str_line['submatrices_per_worker']=max_submatrices_per_worker
+            tiles_dir+=1
+            
+            outfile.write(json.dumps(str_line) + "\n")
+
+            
     outfile.close()
+
