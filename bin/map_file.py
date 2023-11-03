@@ -4,6 +4,7 @@ import logging
 import time
 import json
 from downloader import wgs_to_tile, get_url
+import math
 
 logger = logging.getLogger(__name__)
 logging.basicConfig()
@@ -13,7 +14,7 @@ logger.setLevel(logging.DEBUG)
 if __name__ == '__main__':
     start_time = time.time()
     out_err = open("bad_links.csv", "w")
-    zone = 'test'
+    
     maps = {'marcianise': [41.03699966153493, 14.282332207120104, 41.02356625889453, 14.300298406435248],
             'casapulla' : [41.082515040404, 14.268917099445803, 41.066324184008195, 14.302277371886024],
             'casagiove' : [41.08261546935178, 14.303388824263887, 41.07064562316231, 14.324267139938394],
@@ -24,7 +25,7 @@ if __name__ == '__main__':
             'test': [41.047047, 14.282363, 41.029596, 14.326394]
             }
 
-    c_map = maps[zone]
+    c_map = maps['test']
 
     x1 = c_map[1]
     y1 = c_map[0]
@@ -33,46 +34,37 @@ if __name__ == '__main__':
     z = 17
     pos1x, pos1y = wgs_to_tile(x1, y1, z)
     pos2x, pos2y = wgs_to_tile(x2, y2, z)
-    lenx = pos2x - pos1x + 1
+    lenx = pos2x - pos1x 
     glob_lenx = lenx
-    leny = pos2y - pos1y + 1
+    leny = pos2y - pos1y 
     logger.info("tiles from {pos1x},{pos1y}, [{lenx},{leny}]".format(pos1x=pos1x, pos1y=pos1y, lenx=lenx, leny=leny))
 
     # Define the number of group
-    N = 3
-    matrix_size = 20
+    
+    matrix_size = max(lenx,leny)
     submatrix_size = 9
 
-    matrix_size = matrix_size + (submatrix_size - matrix_size % 9)
+    matrix_size = matrix_size + (submatrix_size - matrix_size % submatrix_size)
 
-    subm_m_size = matrix_size / submatrix_size
-
-    # Calculate the number of submatrices per worker
-    submatrices_per_worker = (matrix_size // submatrix_size) * (matrix_size // submatrix_size) // N
-    logger.info("matrix size= {ms} submatrix size= {sms}, workers= {wrks}, subm_work= {sbmw}".format(ms=matrix_size, sms=submatrix_size, wrks=N, sbmw=submatrices_per_worker))
+    N = (int)(matrix_size / submatrix_size)
+     # Calculate the number of submatrices per worker-
+    submatrices_per_group = (matrix_size // submatrix_size) * (matrix_size // submatrix_size) // N
+    #logger.info("matrix size= {ms} submatrix size= {sms}, workers= {wrks}, subm_work= {sbmw}".format(ms=matrix_size, sms=submatrix_size, wrks=N, sbmw=submatrices_per_worker))
     tiles_dir=0
-    group=0
+    
 
-    for worker_id in range(N):
+    for group in range(N):
         submatrix_batch = []
         str_line = {'msize': matrix_size, 'subsize': submatrix_size, 'pos1x': pos1x, 'pos1y': pos1y, 'pos2x': pos2x, 'pos2y': pos2y}
         str_line['server'] = "Google"
         str_line['style'] = 's'
         str_line['zoom'] = z
         
-        outfile = open(f"mapper_input_worker_{worker_id}.txt", "w")
+        outfile = open(f"mapper_input_{group}.txt", "w")
 
-        # Calcola il numero massimo di sottomatrici che un worker può gestire
-        max_submatrices_per_worker = submatrices_per_worker
-        if worker_id == N - 1:
-            max_submatrices_per_worker += (matrix_size // submatrix_size) * (matrix_size // submatrix_size) % N
-
-        for i in range(max_submatrices_per_worker):
-            submatrix_id = i + submatrices_per_worker * worker_id
-
-            # Assicurati che il submatrix_id sia all'interno del range corretto
-            if submatrix_id >= (matrix_size // submatrix_size) * (matrix_size // submatrix_size):
-                break
+ 
+        for i in range(submatrices_per_group):
+            submatrix_id = i + submatrices_per_group * group
 
             subm_row = int(submatrix_id // (matrix_size // submatrix_size))
             subm_col = int(submatrix_id % (matrix_size // submatrix_size))
@@ -80,9 +72,9 @@ if __name__ == '__main__':
             start_col = int(subm_col * submatrix_size)
             str_line['start_row'] = start_row
             str_line['start_col'] = start_col
-            str_line['tiles_dir'] = f"{worker_id}/{tiles_dir}"
-            str_line['group']=worker_id
-            str_line['submatrices_per_worker'] = max_submatrices_per_worker
+            str_line['tiles_dir'] = f"{group}/{tiles_dir}"
+            str_line['group']=group
+            str_line['submatrices_per_group'] = submatrices_per_group
             
             tiles_dir += 1
             
