@@ -127,7 +127,7 @@ if __name__ == "__main__":
         x_pos=(int)(pos1x-json_str["pos1x"])/lenx
         y_pos=(int)(pos1y-json_str["pos1y"])/leny
         outpic.save(f"{output_dir}/{group}/{pos1x}_{pos1y}_{lenx}.tiff", format="TIFF")
-        resize(f"{output_dir}/{pos1x}_{pos1y}_{lenx}.tiff",f"{output_dir}/{group}/{x_pos}_{y_pos}_1500.tiff")
+        resize(f"{output_dir}/{group}/{pos1x}_{pos1y}_{lenx}.tiff",f"{output_dir}/{group}/{x_pos}_{y_pos}_1500.tiff")
         #rete neurale per generare la mask image 
         if x_pos not in pos1x_list:
             
